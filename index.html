@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Information Lookup System</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e88e5, #0d47a1);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .search-section {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .search-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #1e88e5;
+            box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
+        }
+        
+        button {
+            background-color: #1e88e5;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            margin-top: 25px;
+        }
+        
+        button:hover {
+            background-color: #1565c0;
+        }
+        
+        .results-section {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: none;
+        }
+        
+        .results-header {
+            background-color: #1e88e5;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .results-content {
+            padding: 25px;
+        }
+        
+        .result-item {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            color: #1e88e5;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .form-group {
+                min-width: 100%;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Vehicle Information Lookup System</h1>
+            <p>Search for vehicle details by entering a vehicle number</p>
+        </header>
+        
+        <section class="search-section">
+            <div class="search-form">
+                <div class="form-group">
+                    <label for="vehicleSelect">Select Vehicle Number:</label>
+                    <select id="vehicleSelect">
+                        <option value="">-- Select a vehicle number --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="vehicleInput">Or Enter Vehicle Number:</label>
+                    <input type="text" id="vehicleInput" placeholder="e.g., AP39UY3435">
+                </div>
+            </div>
+            
+            <button type="button" onclick="searchVehicle()">Search Vehicle</button>
+        </section>
+        
+        <section class="results-section" id="resultsSection">
+            <div class="results-header">Vehicle Details</div>
+            <div class="results-content" id="resultsContent">
+                <!-- Results will be displayed here -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Vehicle data
+        const vehicleData = [
+            {
+                partyName: "YARA GOVIND RAO",
+                accountNo: "29611100003742",
+                bankName: "DCB Bank, Anakapalli",
+                beneficiary: "YARA GOVIND RAO",
+                pan: "AYBPY0969R",
+                vehicleNumbers: ["AP39UY3435", "AP39UY3345"]
+            },
+            {
+                partyName: "GADASALA SHIVA",
+                accountNo: "1420155000065560",
+                bankName: "KVB",
+                beneficiary: "Gadasala Shiva",
+                pan: "BTSPG7175G",
+                vehicleNumbers: ["AP39WC2389", "AP39UQ2489"]
+            },
+            {
+                partyName: "Sri Modamamba Transport",
+                accountNo: "6086101003133",
+                bankName: "CANARA BANK",
+                beneficiary: "Ommi Madhu babu",
+                pan: "ABEYO1294K",
+                vehicleNumbers: ["AP39UZ3335"]
+            },
+            {
+                partyName: "Sri Vijayalaxmi Transport",
+                accountNo: "868457131",
+                bankName: "Indian Bank,Anakapalle",
+                beneficiary: "S K Santosh Kumar",
+                pan: "CWUPS1379C",
+                vehicleNumbers: ["AP39W4518"]
+            },
+            {
+                partyName: "Sri Polnati Venkata Srinivas Rao",
+                accountNo: "11040675260",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "Polnati Venkata Srinivasrao",
+                pan: "EMOPP4189M",
+                vehicleNumbers: ["AP39UH2489"]
+            },
+            {
+                partyName: "SRI MODHAMAMBA TRANSPORT",
+                accountNo: "6546322059",
+                bankName: "Indian Bank Anakapalle",
+                beneficiary: "MONDEPU GOPI",
+                pan: "GDAPM7595D",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "SRI VARDHAN TRANSPORT",
+                accountNo: "6086101005682",
+                bankName: "CB Anakapalle",
+                beneficiary: "PRIYANKA NAGULAPALLI",
+                pan: "CCOPN9093G",
+                vehicleNumbers: ["AP39W3579"]
+            },
+            {
+                partyName: "SHREE NOOKAMBICA LORRY TRANSPORT",
+                accountNo: "30893220505",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "P.N.K.A Ananda Rao",
+                pan: "CHOPP3166M",
+                vehicleNumbers: ["AP39UF3245"]
+            },
+            {
+                partyName: "LAKSHMI SRINIVASA TRANSPORT",
+                accountNo: "053501505619",
+                bankName: "ICICI, Anakapalle",
+                beneficiary: "Gali Venkata Nukaraju",
+                pan: "BQDPG9659K",
+                vehicleNumbers: ["AP39W0505", "AP39WC7499"]
+            },
+            {
+                partyName: "SRI MODAMAMBA LORRY TRANSPORT -POLNATI RAMU",
+                accountNo: "039301000039226",
+                bankName: "Indian Overseas Bank-Anakapalli",
+                beneficiary: "POLNATI RAMU",
+                pan: "AMEPP6405E",
+                vehicleNumbers: ["AP39TV2536"]
+            },
+            {
+                partyName: "POLNATI LAKSHMANA",
+                accountNo: "20393866584",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "POLNATI LAKSHMANA",
+                pan: "EHGPP6721J",
+                vehicleNumbers: ["AP39TV2537"]
+            },
+            {
+                partyName: "GADASALA VENKATA RAO",
+                accountNo: "41897007408",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "GADASALA VENKATA RAO",
+                pan: "BNLPG8819G",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "Sri Durga Devi Lorry Services",
+                accountNo: "30758927213",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "N.Narisinga Rao",
+                pan: "APCPN4125N",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "Sri Balaji Transport",
+                accountNo: "20286779205",
+                bankName: "SBI",
+                beneficiary: "Gangiredla Srinivasa Rao",
+                pan: "BZJPG9951K",
+                vehicleNumbers: ["AP39UE5163", "AP39VB2727", "AP39UP4799"]
+            },
+            {
+                partyName: "BINDHU SREE TRANSPORT AND CONSTRUCTIONS",
+                accountNo: "053505500548",
+                bankName: "ICICI, Anakapalle",
+                beneficiary: "NAMMI SUNITHA",
+                pan: "BMHPB1489C",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "Sri Venkata Durga Lorry service",
+                accountNo: "50100398807876",
+                bankName: "HDFC, Anakapalle",
+                beneficiary: "Ullingala Nageswar Rao",
+                pan: "CKQPN5200B",
+                vehicleNumbers: ["AP39TN2579", "AP39UJ2669"]
+            },
+            {
+                partyName: "Mummina Srinu",
+                accountNo: "31897791454",
+                bankName: "SBI",
+                beneficiary: "Mummina Srinu",
+                pan: "NIEPS1843A",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "LANKA NAGESWARA RAO",
+                accountNo: "386602010025075",
+                bankName: "UNION BANK",
+                beneficiary: "Lanka Nageswara Rao",
+                pan: "AYWPL8780A",
+                vehicleNumbers: ["AP39UU5665"]
+            },
+            {
+                partyName: "R.K TRANSPORT",
+                accountNo: "18862612000462",
+                bankName: "PUNJAB NATIONAL BANK",
+                beneficiary: "Ommi Venkata Rao",
+                pan: "CACPV1217L",
+                vehicleNumbers: ["AP39UG0559"]
+            },
+            {
+                partyName: "SRI SIVA DURGA LORRY SERVICE",
+                accountNo: "44005352428",
+                bankName: "SBI, ANAKAPALLI",
+                beneficiary: "Kommuri Durga Prasad",
+                pan: "CKBPK7332L",
+                vehicleNumbers: ["AP39WD8349"]
+            },
+            {
+                partyName: "SRI MANIKANTA BALAJI LORRY TRANSPORT",
+                accountNo: "33982901231",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "M SOMUNAIDU",
+                pan: "CLXPM8882N",
+                vehicleNumbers: ["AP39WD4199"]
+            },
+            {
+                partyName: "Sri Kanaka Durga LorrySERVICE",
+                accountNo: "50100482507472",
+                bankName: "HDFC, Anakapalle",
+                beneficiary: "CH.POLANDRA",
+                pan: "FRQPP2042K",
+                vehicleNumbers: ["AP39UJ2399"]
+            },
+            {
+                partyName: "K DURGA RAO",
+                accountNo: "184010100508162",
+                bankName: "AXIS BANK OF INDIA ANAKAPALLE",
+                beneficiary: "K.DURGA RAO",
+                pan: "BCBPR6347H",
+                vehicleNumbers: ["AP31TN4302"]
+            },
+            {
+                partyName: "SRI BALA DURGA LORRY SERVICE",
+                accountNo: "36055252391",
+                bankName: "SBI, Anakapalle",
+                beneficiary: "J.SRI PADHAVALLAABHA",
+                pan: "CCEPJ2049G",
+                vehicleNumbers: ["AP39VF2339"]
+            },
+            {
+                partyName: "SRI MODA VENKATA SURYA LORRY SERVICE",
+                accountNo: "33808097568",
+                bankName: "ANAKAPALLE",
+                beneficiary: "POLNATI TATA RAO",
+                pan: "BYEPP6263R",
+                vehicleNumbers: ["AP39UC6939"]
+            },
+            {
+                partyName: "Hanuman Lorry Service",
+                accountNo: "42325671649",
+                bankName: "Anakapalli",
+                beneficiary: "T.Venkata Suresh",
+                pan: "QSPPS5777F",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "POLNATI ANNAPURNA",
+                accountNo: "6086101003959",
+                bankName: "CANARA BANK",
+                beneficiary: "Polnati Annapuran",
+                pan: "DWOPP2749J",
+                vehicleNumbers: ["AP39WC9149", "AP39UP9239"]
+            },
+            {
+                partyName: "SRI VIJAYA DURGA ENTERPRISES",
+                accountNo: "31499967751",
+                bankName: "SBI ANAKAPALLE",
+                beneficiary: "VASADI RAMESH",
+                pan: "AGNPV7563J",
+                vehicleNumbers: []
+            },
+            {
+                partyName: "VYSHNAVI LORRY TRANSPORT",
+                accountNo: "053501507032",
+                bankName: "ICICI, Anakapalle",
+                beneficiary: "KARANAM A SRINIVASARAO",
+                pan: "PJFPS1223C",
+                vehicleNumbers: []
+            }
+        ];
+
+        // Populate the dropdown with vehicle numbers
+        const vehicleSelect = document.getElementById('vehicleSelect');
+        const allVehicleNumbers = [];
+        
+        vehicleData.forEach(vehicle => {
+            vehicle.vehicleNumbers.forEach(number => {
+                if (number && !allVehicleNumbers.includes(number)) {
+                    allVehicleNumbers.push(number);
+                    const option = document.createElement('option');
+                    option.value = number;
+                    option.textContent = number;
+                    vehicleSelect.appendChild(option);
+                }
+            });
+        });
+
+        // Search function
+        function searchVehicle() {
+            const selectValue = vehicleSelect.value;
+            const inputValue = document.getElementById('vehicleInput').value.trim().toUpperCase();
+            
+            let searchValue = selectValue;
+            if (!searchValue && inputValue) {
+                searchValue = inputValue;
+            }
+            
+            if (!searchValue) {
+                alert('Please select or enter a vehicle number');
+                return;
+            }
+            
+            const results = vehicleData.filter(vehicle => 
+                vehicle.vehicleNumbers.includes(searchValue)
+            );
+            
+            displayResults(results, searchValue);
+        }
+
+        // Display results
+        function displayResults(results, searchValue) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsContent.innerHTML = '';
+            
+            if (results.length === 0) {
+                resultsContent.innerHTML = '<div class="no-results">No details found for vehicle number: ' + searchValue + '</div>';
+            } else {
+                results.forEach(vehicle => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'result-item';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result-title">Party Name: ${vehicle.partyName}</div>
+                        <div><strong>Bank Account No.:</strong> ${vehicle.accountNo}</div>
+                        <div><strong>Bank Name & Branch:</strong> ${vehicle.bankName}</div>
+                        <div><strong>Beneficiary:</strong> ${vehicle.beneficiary}</div>
+                        <div><strong>PAN:</strong> ${vehicle.pan}</div>
+                        <div><strong>Vehicle Numbers:</strong> ${vehicle.vehicleNumbers.join(', ')}</div>
+                    `;
+                    
+                    resultsContent.appendChild(resultDiv);
+                });
+            }
+            
+            resultsSection.style.display = 'block';
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Add event listener to the input field
+        document.getElementById('vehicleInput').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                searchVehicle();
+            }
+        });
+
+        // Add event listener to the select dropdown
+        vehicleSelect.addEventListener('change', function() {
+            if (this.value) {
+                document.getElementById('vehicleInput').value = '';
+                searchVehicle();
+            }
+        });
+    </script>
+</body>
+</html>
