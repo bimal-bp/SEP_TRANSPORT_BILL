@@ -99,6 +99,15 @@
             background-color: #1565c0;
         }
         
+        .btn-secondary {
+            background-color: #4caf50;
+            margin-left: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #388e3c;
+        }
+        
         .results-section {
             background-color: white;
             border-radius: 10px;
@@ -145,13 +154,69 @@
             font-style: italic;
         }
         
+        .add-vendor-section {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-field {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .vehicle-numbers-container {
+            margin-top: 15px;
+        }
+        
+        .vehicle-number-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .remove-vehicle {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .add-vehicle {
+            background-color: #9e9e9e;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
         @media (max-width: 768px) {
-            .form-group {
+            .form-group, .form-field {
                 min-width: 100%;
             }
             
             h1 {
                 font-size: 2rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 15px;
             }
         }
     </style>
@@ -160,7 +225,7 @@
     <div class="container">
         <header>
             <h1>Vehicle Information Lookup System</h1>
-            <p>Search for vehicle details by entering a vehicle number</p>
+            <p>Search for vehicle details by selecting a vehicle number</p>
         </header>
         
         <section class="search-section">
@@ -172,14 +237,10 @@
                         <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
-                
-                <div class="form-group">
-                    <label for="vehicleInput">Or Enter Vehicle Number:</label>
-                    <input type="text" id="vehicleInput" placeholder="e.g., AP39UY3435">
-                </div>
             </div>
             
             <button type="button" onclick="searchVehicle()">Search Vehicle</button>
+            <button type="button" class="btn-secondary" onclick="toggleAddVendorForm()">Add New Vendor</button>
         </section>
         
         <section class="results-section" id="resultsSection">
@@ -188,11 +249,65 @@
                 <!-- Results will be displayed here -->
             </div>
         </section>
+        
+        <section class="add-vendor-section" id="addVendorSection">
+            <div class="results-header">Add New Vendor</div>
+            <div class="results-content">
+                <form id="vendorForm">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="partyName">Party Name:</label>
+                            <input type="text" id="partyName" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="accountNo">Account Number:</label>
+                            <input type="text" id="accountNo" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="bankName">Bank Name & Branch:</label>
+                            <input type="text" id="bankName" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="beneficiary">Beneficiary:</label>
+                            <input type="text" id="beneficiary" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="pan">PAN Number:</label>
+                            <input type="text" id="pan" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Vehicle Numbers:</label>
+                            <div class="vehicle-numbers-container" id="vehicleNumbersContainer">
+                                <div class="vehicle-number-input">
+                                    <input type="text" class="vehicleNumber" placeholder="Vehicle Number" required>
+                                    <button type="button" class="remove-vehicle" onclick="removeVehicleField(this)">Remove</button>
+                                </div>
+                            </div>
+                            <button type="button" class="add-vehicle" onclick="addVehicleField()">Add Another Vehicle</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <button type="button" onclick="addNewVendor()">Save Vendor</button>
+                        <button type="button" class="btn-secondary" onclick="toggleAddVendorForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </section>
     </div>
 
     <script>
         // Vehicle data
-        const vehicleData = [
+        let vehicleData = [
             {
                 partyName: "YARA GOVIND RAO",
                 accountNo: "29611100003742",
@@ -427,42 +542,48 @@
             }
         ];
 
+        // Initialize the application
+        function initApp() {
+            populateVehicleDropdown();
+        }
+
         // Populate the dropdown with vehicle numbers
-        const vehicleSelect = document.getElementById('vehicleSelect');
-        const allVehicleNumbers = [];
-        
-        vehicleData.forEach(vehicle => {
-            vehicle.vehicleNumbers.forEach(number => {
-                if (number && !allVehicleNumbers.includes(number)) {
-                    allVehicleNumbers.push(number);
-                    const option = document.createElement('option');
-                    option.value = number;
-                    option.textContent = number;
-                    vehicleSelect.appendChild(option);
-                }
+        function populateVehicleDropdown() {
+            const vehicleSelect = document.getElementById('vehicleSelect');
+            // Clear existing options except the first one
+            while (vehicleSelect.options.length > 1) {
+                vehicleSelect.remove(1);
+            }
+            
+            const allVehicleNumbers = [];
+            
+            vehicleData.forEach(vehicle => {
+                vehicle.vehicleNumbers.forEach(number => {
+                    if (number && !allVehicleNumbers.includes(number)) {
+                        allVehicleNumbers.push(number);
+                        const option = document.createElement('option');
+                        option.value = number;
+                        option.textContent = number;
+                        vehicleSelect.appendChild(option);
+                    }
+                });
             });
-        });
+        }
 
         // Search function
         function searchVehicle() {
-            const selectValue = vehicleSelect.value;
-            const inputValue = document.getElementById('vehicleInput').value.trim().toUpperCase();
+            const selectValue = document.getElementById('vehicleSelect').value;
             
-            let searchValue = selectValue;
-            if (!searchValue && inputValue) {
-                searchValue = inputValue;
-            }
-            
-            if (!searchValue) {
-                alert('Please select or enter a vehicle number');
+            if (!selectValue) {
+                alert('Please select a vehicle number');
                 return;
             }
             
             const results = vehicleData.filter(vehicle => 
-                vehicle.vehicleNumbers.includes(searchValue)
+                vehicle.vehicleNumbers.includes(selectValue)
             );
             
-            displayResults(results, searchValue);
+            displayResults(results, selectValue);
         }
 
         // Display results
@@ -498,20 +619,97 @@
             resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Add event listener to the input field
-        document.getElementById('vehicleInput').addEventListener('keyup', function(event) {
-            if (event.key === 'Enter') {
-                searchVehicle();
+        // Toggle add vendor form
+        function toggleAddVendorForm() {
+            const addVendorSection = document.getElementById('addVendorSection');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            if (addVendorSection.style.display === 'block') {
+                addVendorSection.style.display = 'none';
+                document.getElementById('vendorForm').reset();
+                // Reset to single vehicle field
+                const container = document.getElementById('vehicleNumbersContainer');
+                while (container.children.length > 1) {
+                    container.removeChild(container.lastChild);
+                }
+            } else {
+                addVendorSection.style.display = 'block';
+                resultsSection.style.display = 'none';
+                addVendorSection.scrollIntoView({ behavior: 'smooth' });
             }
-        });
+        }
 
-        // Add event listener to the select dropdown
-        vehicleSelect.addEventListener('change', function() {
-            if (this.value) {
-                document.getElementById('vehicleInput').value = '';
-                searchVehicle();
+        // Add vehicle field
+        function addVehicleField() {
+            const container = document.getElementById('vehicleNumbersContainer');
+            const newField = document.createElement('div');
+            newField.className = 'vehicle-number-input';
+            newField.innerHTML = `
+                <input type="text" class="vehicleNumber" placeholder="Vehicle Number">
+                <button type="button" class="remove-vehicle" onclick="removeVehicleField(this)">Remove</button>
+            `;
+            container.appendChild(newField);
+        }
+
+        // Remove vehicle field
+        function removeVehicleField(button) {
+            const container = document.getElementById('vehicleNumbersContainer');
+            if (container.children.length > 1) {
+                container.removeChild(button.parentNode);
             }
-        });
+        }
+
+        // Add new vendor
+        function addNewVendor() {
+            const partyName = document.getElementById('partyName').value.trim();
+            const accountNo = document.getElementById('accountNo').value.trim();
+            const bankName = document.getElementById('bankName').value.trim();
+            const beneficiary = document.getElementById('beneficiary').value.trim();
+            const pan = document.getElementById('pan').value.trim();
+            
+            // Get all vehicle numbers
+            const vehicleInputs = document.querySelectorAll('.vehicleNumber');
+            const vehicleNumbers = [];
+            
+            vehicleInputs.forEach(input => {
+                const value = input.value.trim().toUpperCase();
+                if (value) {
+                    vehicleNumbers.push(value);
+                }
+            });
+            
+            // Validate required fields
+            if (!partyName || !accountNo || !bankName || !beneficiary || !pan || vehicleNumbers.length === 0) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Create new vendor object
+            const newVendor = {
+                partyName,
+                accountNo,
+                bankName,
+                beneficiary,
+                pan,
+                vehicleNumbers
+            };
+            
+            // Add to data array
+            vehicleData.push(newVendor);
+            
+            // Update dropdown
+            populateVehicleDropdown();
+            
+            // Show success message
+            alert('Vendor added successfully!');
+            
+            // Reset form and hide it
+            document.getElementById('vendorForm').reset();
+            toggleAddVendorForm();
+        }
+
+        // Initialize the app when page loads
+        window.onload = initApp;
     </script>
 </body>
 </html>
