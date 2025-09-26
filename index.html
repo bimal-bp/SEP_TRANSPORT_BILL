@@ -58,6 +58,7 @@
         .form-group {
             flex: 1;
             min-width: 300px;
+            position: relative;
         }
         
         label {
@@ -205,6 +206,42 @@
             margin-top: 10px;
         }
         
+        /* Search suggestions styling */
+        .suggestions-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .highlight {
+            background-color: #e3f2fd;
+            font-weight: bold;
+        }
+        
         @media (max-width: 768px) {
             .form-group, .form-field {
                 min-width: 100%;
@@ -225,17 +262,15 @@
     <div class="container">
         <header>
             <h1>Vehicle Information Lookup System</h1>
-            <p>Search for vehicle details by selecting a vehicle number</p>
+            <p>Search for vehicle details by typing a vehicle number</p>
         </header>
         
         <section class="search-section">
             <div class="search-form">
                 <div class="form-group">
-                    <label for="vehicleSelect">Select Vehicle Number:</label>
-                    <select id="vehicleSelect">
-                        <option value="">-- Select a vehicle number --</option>
-                        <!-- Options will be populated by JavaScript -->
-                    </select>
+                    <label for="vehicleSearch">Search Vehicle Number:</label>
+                    <input type="text" id="vehicleSearch" placeholder="Start typing vehicle number (e.g., AP39UJ)" autocomplete="off">
+                    <div class="suggestions-container" id="suggestionsContainer"></div>
                 </div>
             </div>
             
@@ -544,46 +579,157 @@
 
         // Initialize the application
         function initApp() {
-            populateVehicleDropdown();
+            setupSearchFunctionality();
         }
 
-        // Populate the dropdown with vehicle numbers
-        function populateVehicleDropdown() {
-            const vehicleSelect = document.getElementById('vehicleSelect');
-            // Clear existing options except the first one
-            while (vehicleSelect.options.length > 1) {
-                vehicleSelect.remove(1);
-            }
+        // Set up search functionality
+        function setupSearchFunctionality() {
+            const searchInput = document.getElementById('vehicleSearch');
+            const suggestionsContainer = document.getElementById('suggestionsContainer');
             
-            const allVehicleNumbers = [];
+            // Event listener for input changes
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim().toUpperCase();
+                
+                // Clear suggestions if search term is empty
+                if (searchTerm.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Get matching vehicle numbers
+                const matches = getMatchingVehicles(searchTerm);
+                
+                // Display suggestions
+                displaySuggestions(matches, searchTerm);
+            });
+            
+            // Event listener for clicks outside the search area
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+            
+            // Event listener for keyboard navigation
+            searchInput.addEventListener('keydown', function(e) {
+                const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+                const activeSuggestion = suggestionsContainer.querySelector('.suggestion-item.active');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (suggestions.length > 0) {
+                        if (!activeSuggestion) {
+                            suggestions[0].classList.add('active');
+                        } else {
+                            const currentIndex = Array.from(suggestions).indexOf(activeSuggestion);
+                            const nextIndex = (currentIndex + 1) % suggestions.length;
+                            activeSuggestion.classList.remove('active');
+                            suggestions[nextIndex].classList.add('active');
+                        }
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (suggestions.length > 0 && activeSuggestion) {
+                        const currentIndex = Array.from(suggestions).indexOf(activeSuggestion);
+                        const prevIndex = (currentIndex - 1 + suggestions.length) % suggestions.length;
+                        activeSuggestion.classList.remove('active');
+                        suggestions[prevIndex].classList.add('active');
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeSuggestion) {
+                        searchInput.value = activeSuggestion.textContent;
+                        suggestionsContainer.style.display = 'none';
+                        searchVehicle();
+                    } else {
+                        searchVehicle();
+                    }
+                }
+            });
+        }
+
+        // Get matching vehicles based on search term
+        function getMatchingVehicles(searchTerm) {
+            const matches = [];
             
             vehicleData.forEach(vehicle => {
                 vehicle.vehicleNumbers.forEach(number => {
-                    if (number && !allVehicleNumbers.includes(number)) {
-                        allVehicleNumbers.push(number);
-                        const option = document.createElement('option');
-                        option.value = number;
-                        option.textContent = number;
-                        vehicleSelect.appendChild(option);
+                    if (number && number.includes(searchTerm) && !matches.includes(number)) {
+                        matches.push(number);
                     }
                 });
             });
+            
+            // Sort matches by relevance (closer matches first)
+            matches.sort((a, b) => {
+                const aIndex = a.indexOf(searchTerm);
+                const bIndex = b.indexOf(searchTerm);
+                return aIndex - bIndex;
+            });
+            
+            return matches;
+        }
+
+        // Display suggestions in the dropdown
+        function displaySuggestions(matches, searchTerm) {
+            const suggestionsContainer = document.getElementById('suggestionsContainer');
+            
+            // Clear previous suggestions
+            suggestionsContainer.innerHTML = '';
+            
+            if (matches.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Create suggestion items
+            matches.forEach(match => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = match;
+                
+                // Highlight the matching part
+                const regex = new RegExp(searchTerm, 'gi');
+                suggestionItem.innerHTML = match.replace(regex, '<span class="highlight">$&</span>');
+                
+                // Add click event
+                suggestionItem.addEventListener('click', function() {
+                    document.getElementById('vehicleSearch').value = match;
+                    suggestionsContainer.style.display = 'none';
+                    searchVehicle();
+                });
+                
+                // Add hover effect
+                suggestionItem.addEventListener('mouseover', function() {
+                    // Remove active class from all suggestions
+                    suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    // Add active class to current suggestion
+                    this.classList.add('active');
+                });
+                
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
         }
 
         // Search function
         function searchVehicle() {
-            const selectValue = document.getElementById('vehicleSelect').value;
+            const searchValue = document.getElementById('vehicleSearch').value.trim().toUpperCase();
             
-            if (!selectValue) {
-                alert('Please select a vehicle number');
+            if (!searchValue) {
+                alert('Please enter a vehicle number');
                 return;
             }
             
             const results = vehicleData.filter(vehicle => 
-                vehicle.vehicleNumbers.includes(selectValue)
+                vehicle.vehicleNumbers.includes(searchValue)
             );
             
-            displayResults(results, selectValue);
+            displayResults(results, searchValue);
         }
 
         // Display results
@@ -696,9 +842,6 @@
             
             // Add to data array
             vehicleData.push(newVendor);
-            
-            // Update dropdown
-            populateVehicleDropdown();
             
             // Show success message
             alert('Vendor added successfully!');
