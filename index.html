@@ -296,6 +296,15 @@
             color: #1e88e5;
         }
         
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeaa7;
+        }
+        
         @media (max-width: 768px) {
             .form-group, .form-field {
                 min-width: 100%;
@@ -809,7 +818,7 @@
                     return;
                 }
                 
-                // Get matching vehicle numbers
+                // Get matching vehicle numbers from both vehicleData and transportData
                 const matches = getMatchingVehicles(searchTerm);
                 
                 // Display suggestions
@@ -865,6 +874,7 @@
         function getMatchingVehicles(searchTerm) {
             const matches = [];
             
+            // Get matches from vehicleData
             vehicleData.forEach(vehicle => {
                 vehicle.vehicleNumbers.forEach(number => {
                     if (number && number.includes(searchTerm) && !matches.includes(number)) {
@@ -872,6 +882,16 @@
                     }
                 });
             });
+            
+            // Get matches from transportData (vehicles that have transactions but no vendor details)
+            if (transportData.length > 0) {
+                transportData.forEach(record => {
+                    const vehicleNo = record['VEHICLE NO'] ? record['VEHICLE NO'].toString().trim().toUpperCase() : '';
+                    if (vehicleNo && vehicleNo.includes(searchTerm) && !matches.includes(vehicleNo)) {
+                        matches.push(vehicleNo);
+                    }
+                });
+            }
             
             // Sort matches by relevance (closer matches first)
             matches.sort((a, b) => {
@@ -951,9 +971,28 @@
             
             resultsContent.innerHTML = '';
             
+            // Check if vehicle has transport records
+            const hasTransportRecords = transportData.some(record => {
+                const recordVehicleNo = record['VEHICLE NO'] ? record['VEHICLE NO'].toString().trim().toUpperCase() : '';
+                return recordVehicleNo === searchValue;
+            });
+            
             if (results.length === 0) {
-                resultsContent.innerHTML = '<div class="no-results">No vendor details found for vehicle number: ' + searchValue + '</div>';
+                if (hasTransportRecords) {
+                    // Vehicle has transport records but no vendor details
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'warning';
+                    warningDiv.innerHTML = `
+                        <strong>Note:</strong> Vendor details not found for vehicle number: ${searchValue}. 
+                        However, transport records are available below.
+                    `;
+                    resultsContent.appendChild(warningDiv);
+                } else {
+                    // No vendor details and no transport records
+                    resultsContent.innerHTML = '<div class="no-results">No vendor details found for vehicle number: ' + searchValue + '</div>';
+                }
             } else {
+                // Display vendor details
                 results.forEach(vehicle => {
                     const resultDiv = document.createElement('div');
                     resultDiv.className = 'result-item';
@@ -969,9 +1008,17 @@
                     
                     resultsContent.appendChild(resultDiv);
                 });
-                
-                // Add transport details
+            }
+            
+            // Always display transport details if available
+            if (hasTransportRecords) {
                 displayTransportDetails(searchValue);
+            } else if (results.length > 0) {
+                // If we have vendor details but no transport records
+                const noTransportDiv = document.createElement('div');
+                noTransportDiv.className = 'no-results';
+                noTransportDiv.textContent = 'No transport records found for this vehicle.';
+                resultsContent.appendChild(noTransportDiv);
             }
             
             resultsSection.style.display = 'block';
@@ -1011,11 +1058,7 @@
             });
             
             if (transportRecords.length === 0) {
-                const noTransportDiv = document.createElement('div');
-                noTransportDiv.className = 'no-results';
-                noTransportDiv.textContent = 'No transport records found for this vehicle.';
-                document.getElementById('resultsContent').appendChild(noTransportDiv);
-                return;
+                return; // No transport records to display
             }
             
             // Create transport details section
