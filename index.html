@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Information Lookup System</title>
+    <title>Transporter Detials September</title>
     <style>
         * {
             box-sizing: border-box;
@@ -109,6 +109,15 @@
             background-color: #388e3c;
         }
         
+        .btn-print {
+            background-color: #ff9800;
+            margin-left: 10px;
+        }
+        
+        .btn-print:hover {
+            background-color: #f57c00;
+        }
+        
         .results-section {
             background-color: white;
             border-radius: 10px;
@@ -123,6 +132,9 @@
             padding: 15px 20px;
             font-size: 1.2rem;
             font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .results-content {
@@ -242,6 +254,47 @@
             font-weight: bold;
         }
         
+        /* Transport details table */
+        .transport-details {
+            margin-top: 30px;
+        }
+        
+        .transport-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .transport-table th, .transport-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .transport-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .transport-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #1e88e5;
+        }
+        
         @media (max-width: 768px) {
             .form-group, .form-field {
                 min-width: 100%;
@@ -255,14 +308,29 @@
                 flex-direction: column;
                 gap: 15px;
             }
+            
+            .transport-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+        
+        @media print {
+            .search-section, .add-vendor-section, .btn-print {
+                display: none;
+            }
+            
+            .results-section {
+                display: block !important;
+                box-shadow: none;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Vehicle Information Lookup System</h1>
-            <p>Search for vehicle details by typing a vehicle number</p>
+            <h1>September Transport Billing System</h1>
         </header>
         
         <section class="search-section">
@@ -279,7 +347,10 @@
         </section>
         
         <section class="results-section" id="resultsSection">
-            <div class="results-header">Vehicle Details</div>
+            <div class="results-header">
+                <span>Vehicle Details</span>
+                <button type="button" class="btn-print" onclick="printResults()">Print</button>
+            </div>
             <div class="results-content" id="resultsContent">
                 <!-- Results will be displayed here -->
             </div>
@@ -577,9 +648,93 @@
             }
         ];
 
+        // Transport data
+        let transportData = [];
+
         // Initialize the application
         function initApp() {
             setupSearchFunctionality();
+            loadTransportData();
+        }
+
+        // Load transport data from GitHub
+        async function loadTransportData() {
+            try {
+                const resultsContent = document.getElementById('resultsContent');
+                resultsContent.innerHTML = '<div class="loading">Loading transport data...</div>';
+                
+                // GitHub raw URL for the Excel file
+                const githubUrl = 'https://raw.githubusercontent.com/bimal-bp/trasport_vehicle_details/main/Sep_transport_bill.xlsx';
+                
+                // Fetch the Excel file
+                const response = await fetch(githubUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch data: ${response.status}`);
+                }
+                
+                // Convert to blob
+                const blob = await response.blob();
+                
+                // Read the Excel file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        // Parse the Excel file
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        
+                        // Get the first sheet
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        
+                        // Convert to JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                        
+                        // Process the data
+                        processTransportData(jsonData);
+                        
+                        // Clear loading message
+                        resultsContent.innerHTML = '';
+                    } catch (error) {
+                        console.error('Error processing Excel data:', error);
+                        resultsContent.innerHTML = '<div class="no-results">Error loading transport data. Please try again later.</div>';
+                    }
+                };
+                
+                reader.readAsArrayBuffer(blob);
+            } catch (error) {
+                console.error('Error fetching transport data:', error);
+                const resultsContent = document.getElementById('resultsContent');
+                resultsContent.innerHTML = '<div class="no-results">Error loading transport data. Please try again later.</div>';
+            }
+        }
+
+        // Process transport data
+        function processTransportData(jsonData) {
+            if (!jsonData || jsonData.length < 2) {
+                console.error('Invalid data format');
+                return;
+            }
+            
+            // Extract headers (first row)
+            const headers = jsonData[0].map(header => header ? header.toString().trim() : '');
+            
+            // Process data rows
+            transportData = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row && row.length > 0) {
+                    const rowData = {};
+                    headers.forEach((header, index) => {
+                        if (header && row[index] !== undefined) {
+                            rowData[header] = row[index];
+                        }
+                    });
+                    transportData.push(rowData);
+                }
+            }
+            
+            console.log('Transport data loaded:', transportData.length, 'records');
         }
 
         // Set up search functionality
@@ -740,7 +895,7 @@
             resultsContent.innerHTML = '';
             
             if (results.length === 0) {
-                resultsContent.innerHTML = '<div class="no-results">No details found for vehicle number: ' + searchValue + '</div>';
+                resultsContent.innerHTML = '<div class="no-results">No vendor details found for vehicle number: ' + searchValue + '</div>';
             } else {
                 results.forEach(vehicle => {
                     const resultDiv = document.createElement('div');
@@ -757,12 +912,127 @@
                     
                     resultsContent.appendChild(resultDiv);
                 });
+                
+                // Add transport details
+                displayTransportDetails(searchValue);
             }
             
             resultsSection.style.display = 'block';
             
             // Scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Display transport details
+        function displayTransportDetails(vehicleNumber) {
+            if (transportData.length === 0) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'loading';
+                loadingDiv.textContent = 'Loading transport details...';
+                document.getElementById('resultsContent').appendChild(loadingDiv);
+                
+                // Try to load data again if not available
+                setTimeout(() => {
+                    if (transportData.length === 0) {
+                        loadTransportData().then(() => {
+                            // After loading, try to display transport details again
+                            const existingLoading = document.querySelector('.loading');
+                            if (existingLoading) {
+                                existingLoading.remove();
+                            }
+                            displayTransportDetails(vehicleNumber);
+                        });
+                    }
+                }, 1000);
+                return;
+            }
+            
+            // Filter transport data for the vehicle
+            const transportRecords = transportData.filter(record => {
+                const recordVehicleNo = record['VEHICLE NO'] ? record['VEHICLE NO'].toString().trim().toUpperCase() : '';
+                return recordVehicleNo === vehicleNumber;
+            });
+            
+            if (transportRecords.length === 0) {
+                const noTransportDiv = document.createElement('div');
+                noTransportDiv.className = 'no-results';
+                noTransportDiv.textContent = 'No transport records found for this vehicle.';
+                document.getElementById('resultsContent').appendChild(noTransportDiv);
+                return;
+            }
+            
+            // Create transport details section
+            const transportDiv = document.createElement('div');
+            transportDiv.className = 'transport-details';
+            
+            transportDiv.innerHTML = `
+                <div class="result-title">Transport Details for Vehicle: ${vehicleNumber}</div>
+                <table class="transport-table">
+                    <thead>
+                        <tr>
+                            <th>Accounting Date</th>
+                            <th>Customer Name</th>
+                            <th>Vehicle No</th>
+                            <th>Material</th>
+                            <th>Net Weight</th>
+                            <th>Transport Rate</th>
+                            <th>Transport Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transportTableBody">
+                    </tbody>
+                </table>
+                <div class="summary" id="transportSummary">
+                </div>
+            `;
+            
+            document.getElementById('resultsContent').appendChild(transportDiv);
+            
+            // Populate table rows
+            const tableBody = document.getElementById('transportTableBody');
+            let totalAmount = 0;
+            
+            transportRecords.forEach(record => {
+                const row = document.createElement('tr');
+                
+                // Format date if it exists
+                let accountingDate = '';
+                if (record['Accounting Date']) {
+                    if (record['Accounting Date'] instanceof Date) {
+                        accountingDate = record['Accounting Date'].toLocaleDateString();
+                    } else {
+                        accountingDate = record['Accounting Date'].toString();
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${accountingDate}</td>
+                    <td>${record['NAME OF THE CUSTOMER'] || ''}</td>
+                    <td>${record['VEHICLE NO'] || ''}</td>
+                    <td>${record['Material'] || ''}</td>
+                    <td>${record['NET WT'] || ''}</td>
+                    <td>${record['Transport Rate'] || ''}</td>
+                    <td>${record['Transport Amount'] || ''}</td>
+                `;
+                
+                tableBody.appendChild(row);
+                
+                // Calculate total amount
+                const amount = parseFloat(record['Transport Amount']) || 0;
+                totalAmount += amount;
+            });
+            
+            // Display summary
+            const summaryDiv = document.getElementById('transportSummary');
+            summaryDiv.innerHTML = `
+                Total Rows: ${transportRecords.length}<br>
+                Total Transport Amount: ${totalAmount.toFixed(2)}
+            `;
+        }
+
+        // Print results
+        function printResults() {
+            window.print();
         }
 
         // Toggle add vendor form
@@ -854,5 +1124,8 @@
         // Initialize the app when page loads
         window.onload = initApp;
     </script>
+    
+    <!-- Include SheetJS library for Excel file processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
