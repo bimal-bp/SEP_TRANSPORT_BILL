@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transporter Detials September</title>
+    <title>Transporter Details September</title>
     <style>
+        /* All your existing CSS styles remain the same */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -687,11 +688,15 @@
                         const sheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[sheetName];
                         
-                        // Convert to JSON
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                        // Convert to JSON with date handling
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                            header: 1,
+                            raw: false,
+                            dateNF: 'yyyy-mm-dd' // Specify date format
+                        });
                         
                         // Process the data
-                        processTransportData(jsonData);
+                        processTransportData(jsonData, worksheet);
                         
                         // Clear loading message
                         resultsContent.innerHTML = '';
@@ -710,7 +715,7 @@
         }
 
         // Process transport data
-        function processTransportData(jsonData) {
+        function processTransportData(jsonData, worksheet) {
             if (!jsonData || jsonData.length < 2) {
                 console.error('Invalid data format');
                 return;
@@ -727,7 +732,12 @@
                     const rowData = {};
                     headers.forEach((header, index) => {
                         if (header && row[index] !== undefined) {
-                            rowData[header] = row[index];
+                            // Handle date conversion for Accounting Date column
+                            if (header === 'Accounting Date' && row[index]) {
+                                rowData[header] = convertExcelDate(row[index]);
+                            } else {
+                                rowData[header] = row[index];
+                            }
                         }
                     });
                     transportData.push(rowData);
@@ -735,6 +745,53 @@
             }
             
             console.log('Transport data loaded:', transportData.length, 'records');
+        }
+
+        // Convert Excel serial date to JavaScript Date object
+        function convertExcelDate(excelDate) {
+            // If it's already a proper date string, return it
+            if (typeof excelDate === 'string' && excelDate.includes('-')) {
+                return excelDate;
+            }
+            
+            // If it's a number (Excel serial date), convert it
+            if (typeof excelDate === 'number') {
+                // Excel date serial numbers start from January 1, 1900
+                const excelEpoch = new Date(1900, 0, 1);
+                // Subtract 2 days because Excel incorrectly considers 1900 as a leap year
+                const jsDate = new Date(excelEpoch.getTime() + (excelDate - 2) * 24 * 60 * 60 * 1000);
+                return jsDate.toISOString().split('T')[0]; // Return as YYYY-MM-DD
+            }
+            
+            // If it's already a Date object, format it
+            if (excelDate instanceof Date) {
+                return excelDate.toISOString().split('T')[0];
+            }
+            
+            // Return as is if we can't convert it
+            return excelDate;
+        }
+
+        // Format date for display
+        function formatDateForDisplay(dateValue) {
+            if (!dateValue) return '';
+            
+            // If it's already a formatted date string, return it
+            if (typeof dateValue === 'string' && dateValue.includes('-')) {
+                const date = new Date(dateValue);
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleDateString('en-IN'); // Indian date format
+                }
+                return dateValue;
+            }
+            
+            // If it's a Date object
+            if (dateValue instanceof Date) {
+                return dateValue.toLocaleDateString('en-IN');
+            }
+            
+            // Return as is if we can't format it
+            return dateValue;
         }
 
         // Set up search functionality
@@ -995,15 +1052,8 @@
             transportRecords.forEach(record => {
                 const row = document.createElement('tr');
                 
-                // Format date if it exists
-                let accountingDate = '';
-                if (record['Accounting Date']) {
-                    if (record['Accounting Date'] instanceof Date) {
-                        accountingDate = record['Accounting Date'].toLocaleDateString();
-                    } else {
-                        accountingDate = record['Accounting Date'].toString();
-                    }
-                }
+                // Format date properly
+                const accountingDate = formatDateForDisplay(record['Accounting Date']);
                 
                 row.innerHTML = `
                     <td>${accountingDate}</td>
